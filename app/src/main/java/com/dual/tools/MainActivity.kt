@@ -27,6 +27,8 @@ import com.journeyapps.barcodescanner.ScanOptions
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URLEncoder
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 class MainActivity : AppCompatActivity() {
 
@@ -522,4 +524,5 @@ class MainActivity : AppCompatActivity() {
                 text = "Save"
                 setBackgroundColor(Color.parseColor("#25D366"))
                 setTextColor(Color.WHITE)
-                setOnC
+                setOn 
+                
