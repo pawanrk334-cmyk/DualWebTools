@@ -27,8 +27,6 @@ import com.journeyapps.barcodescanner.ScanOptions
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URLEncoder
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 class MainActivity : AppCompatActivity() {
 
@@ -524,5 +522,87 @@ class MainActivity : AppCompatActivity() {
                 text = "Save"
                 setBackgroundColor(Color.parseColor("#25D366"))
                 setTextColor(Color.WHITE)
-                setOn 
-                
+                setOnClickListener { saveStatusToGallery(file) }
+            }
+            row.addView(nameTv)
+            row.addView(saveBtn)
+            statusListContainer.addView(row)
+        }
+    }
+
+    private fun saveStatusToGallery(file: DocumentFile) {
+        try {
+            val fileName = file.name ?: "status_${System.currentTimeMillis()}.jpg"
+            val isVideo = fileName.lowercase().endsWith(".mp4")
+            val inputStream = contentResolver.openInputStream(file.uri) ?: return
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, if (isVideo) "video/mp4" else "image/jpeg")
+                    put(
+                        MediaStore.MediaColumns.RELATIVE_PATH,
+                        if (isVideo) Environment.DIRECTORY_MOVIES + "/DualWebTools"
+                        else Environment.DIRECTORY_PICTURES + "/DualWebTools"
+                    )
+                }
+                val collection = if (isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                val outUri = contentResolver.insert(collection, values)
+                if (outUri != null) {
+                    contentResolver.openOutputStream(outUri)?.use { out ->
+                        inputStream.copyTo(out)
+                    }
+                }
+            } else {
+                val dir = File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    "DualWebTools"
+                )
+                if (!dir.exists()) dir.mkdirs()
+                val outFile = File(dir, fileName)
+                FileOutputStream(outFile).use { out ->
+                    inputStream.copyTo(out)
+                }
+            }
+            inputStream.close()
+            Toast.makeText(this, "Status gallery mein save ho gaya!", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Save nahi ho paya: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun checkAppLock() {
+        val savedPin = prefs.getString("app_pin", null) ?: return
+        val input = EditText(this).apply {
+            hint = "4-digit PIN dalein"
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("App Locked")
+            .setView(input)
+            .setCancelable(false)
+            .setPositiveButton("Unlock", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                if (input.text.toString().trim() == savedPin) {
+                    dialog.dismiss()
+                } else {
+                    Toast.makeText(this, "Galat PIN!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Copied Text", text))
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).toInt()
+    }
+}
